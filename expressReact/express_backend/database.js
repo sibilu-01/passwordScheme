@@ -10,12 +10,9 @@ const loadParagraph = () => {
   }
 }
 
-
-
-
 let paragraphs = [
-    { _id: 1, paragraph: loadParagraph()},
-    { _id: 2, paragraph: loadParagraph()},
-    { _id: 3, paragraph: loadParagraph()}
+    { _id: 1, content: loadParagraph()},
+    { _id: 2, content: loadParagraph()},
+    { _id: 3, content: loadParagraph()}
   ];
   module.exports = paragraphs;
