@@ -1,0 +1,43 @@
+“I think it’s a question of whether the five of us working alone will be able to accomplish what
+you have in mind,” said Bernie Ruben, director of the IT department’s Technical Services
+Group. The others around the table controlled their movements and facial expressions, but
+Barton could tell that they agreed. Ruben, at least twenty years Barton’s senior, near enough
+to retirement to feel safe or simply old enough not to care, was the bravest of his direct reports.
+Ruben’s voice contained no fear as he spoke, which differentiated him from the others in the
+conference room: Raj Juvvani, director of Customer Support and Collection Systems, Tyra
+Gordon, director of Loan Operations and New Application Development Systems, and Paul
+Fenton, director of Infrastructure and Operations; all younger, with more to lose.*
+The meeting had not gone according to Barton’s plan. First thing that morning he’d asked
+Jenny, his assistant, to find an IT department organization chart. With that in his possession,
+he’d ascertained who reported to him and summoned them via e-mail to a 10 a.m. meeting. He
+chose to assemble only his operating managers, not including Gary Geisler, a more junior
+manager with whom he planned to meet later in the week.
+*See “IT Organization Chart” at the end of this chapter.
+Once they had all assembled, exchanged greetings, and submitted brief status reports, Barton
+had floated his idea of an off-site management meeting to set direction for the department.
+Before the meeting, Barton would have been hard-pressed to imagine any reasonable
+objections to his plan. He’d expected quick acceptance followed by a session of planning for
+the event.
+But he’d been wrong. No more than three or four minutes into his explanation of what he had
+in mind, Fenton interjected a question: “You want just the five of us at this off-site?”
+“That’s what I was thinking,” said Barton. Fenton and Gordon exchanged knowing looks.
+Barton had not understood the question; he tried for clarification: “Why not just the five of us?”
+Fenton shifted uncomfortably. He glanced in the direction of the others and saw that no help
+would be forthcoming.
+“It’s just that we’ll only be able to go so far in certain discussions without other people
+involved,” said Fenton. “For example, if we want to talk about security, I’d want to involve John
+Cho.”
+“John Cho?” said Barton.
+The others nodded, their movements synchronized. Ruben spoke up: “Cho. You know him.
+Wild hair, purple streaks. Boots. Black tee shirts adorned with human skulls. Piercings.”
+“That guy,” said Barton, nodding. “Been in meetings with him. Not sure I’ve been formally
+introduced.”
+“He’s what’s standing between this company,” said Ruben, “and the armies of hackers who’d
+love to loot a financial services firm.”
+“Are we sure Cho is on our side?” Barton intended this as a joke, but it fell flat.
+Fenton, speaking up for his employee, said: “Oh, John is definitely a white hat.”
+“A white hat?”
+They all nodded, again in sync. Ruben smiled, said, “Although he wouldn’t be caught dead
+actually wearing one.”
+Everyone laughed, which shattered the tension in the room. It was the effect Barton had been
+going for when he’d tried his joke. Ruben had realized it, done Barton a favor.
