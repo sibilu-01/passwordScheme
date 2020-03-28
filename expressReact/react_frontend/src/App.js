@@ -32,17 +32,6 @@ export default class app extends Component {
             card:true
         });
       };
-      showCardInfo=id=> {
-        fetch(`http://localhost:3001/paragraphs/${id}`)
-        .then(response => response.json())
-        .then(
-            responseJson=> {this.setState({ paragraph:responseJson.data })},
-        );
-        this.setState({
-            list:false,
-            card:true
-        });
-      }
       showList = () => {
         this.setState({
           card: false,
@@ -59,7 +48,7 @@ export default class app extends Component {
                             <li
                                 onClick={() => this.showCard(paragraph._id)}
                                 className="list-group-item list-group-item-action">
-                                {paragraph.runs}
+                                {paragraph._id}
                             </li>
                         ))}
                     </div>
@@ -68,7 +57,13 @@ export default class app extends Component {
                     {this.state.card ? (
                         <div class="card" style={{ width: "45rem", height: "10rem"}}>
                             <div class="card-body">
-                                <p class="card-text">{this.state.paragraph.paragraph}</p>
+                            {this.state.paragraphs.map(paragraph => (
+                            <li
+                                onClick={() => this.showCard(paragraph._id)}
+                                className="list-group-item list-group-item-action">
+                                {paragraph.content}
+                            </li>
+                        ))}
                                 <div onClick={() => this.showList()} class="btn btn-primary">
                                     Back
                                 </div>

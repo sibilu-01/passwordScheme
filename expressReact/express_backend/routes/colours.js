@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
 
-let paragraphs = require("../database.js");
+let colours = require("../database.js");
 
 router.get("/list", async (req, res) => {
     try {
       res.status(200).json({
-        data: paragraphs
+        data: colours
       });
     } catch (err) {
       res.status(400).json({
@@ -20,9 +20,9 @@ router.get("/list/:id", async (req, res) => {
     let { id } = req.params;
     id = Number(id);
     try {
-      let paragraph = paragraphs.find(paragraph => paragraph._id === id);
+      let colour = colours.find(paragraph => paragraph._id === id);
       res.status(200).json({
-        data: paragraph
+        data: colour
       });
     } catch (err) {
       res.status(400).json({
