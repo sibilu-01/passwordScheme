@@ -1,11 +1,17 @@
 {
-  "name": "react-frontend",
-  "version": "0.1.0",
+  "name": "3008-password-scheme",
+  "version": "1.0.0",
+  "description": "(Project Name)'s Project2 Part2 [Frontend] for COMP3008W20 @ Carleton University",
+  "author": "Devin Jn Pierre, Sebastian Gadzinski, Sibilu Baissa, Victor Olaitan",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sibilu-01/passwordScheme.git"
+  },
   "dependencies": {
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "3.0.1"
+    "react-scripts": "^3.4.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -28,5 +34,9 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:3001"
+  "proxy": "http://localhost:3001",
+  "bugs": {
+    "url": "https://github.com/sibilu-01/passwordScheme/issues"
+  },
+  "homepage": "http://localhost:3000"
 }
