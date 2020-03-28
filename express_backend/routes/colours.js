@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 
-let paragraphs = require("../database.js");
+let colours = require("../database.js");
 
 router.get("/list", async (req, res) => {
   try {
-    res.send(paragraphs);
+    res.send(colours);
   } catch (err) {
     res.status(400).send({
       message: "Some error occured",
@@ -25,11 +25,11 @@ router.get("/list/:id", async (req, res, next) => {
   }
 
   try {
-    // find paragraph
-    let paragraph = paragraphs.find(paragraph => paragraph._id === id);
+    // find colour
+    let colour = colours.find(colour => colour._id === id);
     // if found send the text, else send 404
-    if (paragraph) {
-      res.send(paragraph.paragraph);
+    if (colour) {
+      res.send(colour.colour);
     } else {
       res.sendStatus(404);
     }
