@@ -287,8 +287,8 @@ class PasswordConfirm extends React.Component {
       else if (password.pwd[i].colour.id !== this.state.circles[i].colour.id) {
         return false;
       }
-        return true;
     }
+    return true;
   }
 
 confirmationResult = () => {
