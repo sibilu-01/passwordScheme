@@ -105,7 +105,7 @@ class Learn extends React.Component {
                 new LogItem(
                   new Date(),
                   new ObjectId(stitchUser.id),
-                  type,
+                  "-",
                   LogItemType.CREATE_START,
                   navigator.userAgent,
                   progress._id
@@ -185,27 +185,37 @@ class Password extends React.Component {
     this.confirmPassword = this.confirmPassword.bind(this);
     this.submitPassword = this.submitPassword.bind(this);
 
-    if (this.state.action !== "create") {
-      stitch
-        .postLog(
-          new LogItem(
-            new Date(),
-            this.state.progress.userId,
-            this.state.type,
-            this.state.action === "confirm"
-              ? LogItemType.CONFIRM_SHOW
-              : LogItemType.TEST_SHOW,
-            "-",
-            this.state.progress._id
-          )
-        )
-        .catch((err) => {
-          console.error(err);
-          alert("Something went wrong when updating logs");
+    stitch
+      .getProgress(this.state.progressId)
+      .then((progress) => {
+        if (!progress) return alert("progress not found!");
+        this.setState({ progress: progress }, () => {
+          if (this.state.action !== "create") {
+            stitch
+              .postLog(
+                new LogItem(
+                  new Date(),
+                  this.state.progress.userId,
+                  this.state.type,
+                  this.state.action === "confirm"
+                    ? LogItemType.CONFIRM_SHOW
+                    : LogItemType.TEST_SHOW,
+                  "-",
+                  this.state.progress._id
+                )
+              )
+              .catch((err) => {
+                console.error(err);
+                alert("Something went wrong when updating logs");
+              });
+          }
+          this.initCircles();
         });
-    }
-
-    this.initCircles();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("something went wrong");
+      });
   }
 
   buildCircles(blank) {
@@ -250,47 +260,42 @@ class Password extends React.Component {
       alert("Something went wrong");
     };
 
-    stitch
-      .getProgress(this.state.progressId)
-      .then((progress) => {
-        if (!progress) return console.error("progress not found!");
-        const passwordName = this.state.type + "Password";
-        const password = progress[passwordName];
-        if (password) {
-          this.setState({
-            progress: progress,
-            circles: this.deserializeCircles(password),
-            password: this.buildCircles(true),
-          });
-        } else {
-          progress[passwordName] = this.serializeCircles(this.buildCircles());
+    const progress = this.state.progress;
+    const passwordName = this.state.type + "Password";
+    const password = progress[passwordName];
+
+    if (password) {
+      this.setState({
+        circles: this.deserializeCircles(password),
+        password: this.buildCircles(true),
+      });
+    } else {
+      progress[passwordName] = this.serializeCircles(this.buildCircles());
+      stitch
+        .updateProgress(progress)
+        .then(() => {
           stitch
-            .updateProgress(progress)
-            .then(() => {
-              stitch
-                .postLog(
-                  new LogItem(
-                    new Date(),
-                    progress.userId,
-                    this.state.type,
-                    LogItemType.CREATE_PASSWORD,
-                    progress[passwordName],
-                    progress._id
-                  )
-                )
-                .then(() =>
-                  this.setState({
-                    progress: progress,
-                    circles: this.deserializeCircles(progress[passwordName]),
-                    password: this.buildCircles(true),
-                  })
-                )
-                .catch(failHandler);
-            })
+            .postLog(
+              new LogItem(
+                new Date(),
+                progress.userId,
+                this.state.type,
+                LogItemType.CREATE_PASSWORD,
+                progress[passwordName],
+                progress._id
+              )
+            )
+            .then(() =>
+              this.setState({
+                progress: progress,
+                circles: this.deserializeCircles(progress[passwordName]),
+                password: this.buildCircles(true),
+              })
+            )
             .catch(failHandler);
-        }
-      })
-      .catch(failHandler);
+        })
+        .catch(failHandler);
+    }
   }
 
   refreshPage() {
@@ -523,7 +528,7 @@ class Password extends React.Component {
               .postLog(
                 new LogItem(
                   new Date(),
-                  that.state.progres.userId,
+                  that.state.progress.userId,
                   "-",
                   LogItemType.FINISH,
                   "-",
