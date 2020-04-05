@@ -24,11 +24,12 @@
 }
 
 .header h1 {
-  margin-bottom: 20vh;
+  margin-bottom: 15vh;
 }
 
 .header h2 {
   font-family: "Montserrat";
+  margin-top: 5vh;
   margin-bottom: 15vh;
 }
 
@@ -50,8 +51,13 @@
   align-items: center;
 }
 
+#password p {
+  text-align: center;
+}
+
 #password .circles {
   display: flex;
+  margin-top: 6vh;
 }
 
 #password .circle-box {
@@ -60,6 +66,9 @@
   padding: 15px;
   text-align: center;
   border-radius: 10px;
+}
+
+#password.confirm .circle-box {
   cursor: pointer;
 }
 
@@ -70,7 +79,7 @@
   margin-left: -2.5px;
 }
 
-#password .circles .circle-box:hover {
+#password.confirm .circles .circle-box:hover {
   width: 85;
   height: 125;
   margin-top: -10px;
