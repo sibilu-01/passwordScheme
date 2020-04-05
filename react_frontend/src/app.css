@@ -103,15 +103,10 @@
 
 #password .confirmText {
   margin-top: 20px;
-  margin-left: -230px;
+  margin-left: -180px;
   color: green;
 }
 
-#password .triesLeft {
-  margin-top: 0px;
-  margin-left: -580px;
-  color: red;
-}
 #password .circles .circle-box + .circle-box {
   margin-left: 20px;
 }

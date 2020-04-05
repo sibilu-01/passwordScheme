@@ -1,23 +1,14 @@
 import React, { Component } from "react";
 import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
+import * as queryString from "query-string";
+
+import { StitchService, LogItem, LogItemType } from "./stitch";
+
 import "./styles.css";
 import "./app.css";
+import { ObjectId } from "bson";
 
-import * as queryString from "query-string";
-var password = {
-  email : null,
-  banking : null,
-  shopping : null
-};  // stores the password submitted
-
-var passwordFor = {
-  email : null,
-  banking: null,
-  shopping: null
-}
-
-var confirmedPassword = null; //boolean that indicates whether user correctly confirmed password or not
-var testResult = null; //boolean that indicates whether testing passed or failed
+const stitch = new StitchService();
 
 export default class app extends Component {
   constructor(props) {
@@ -26,7 +17,7 @@ export default class app extends Component {
       list: true,
       card: true,
       paragraphs: [],
-      paragraph: {}
+      paragraph: {},
     };
   }
 
@@ -56,11 +47,7 @@ export default class app extends Component {
           </div>
           <Switch>
             <Route path="/learn" component={Learn} />
-            <Route path="/test" component={Test} />
             <Route path="/password" component={Password} />
-            <Route path="/confirmpassword" component={PasswordConfirm} />
-            <Route path="/confirmationpage" component={Confirmation} />
-            <Route path="/testResultPage" component= {TestResult} />
             <Route path="/" component={Homepage} />
           </Switch>
         </div>
@@ -74,6 +61,7 @@ class Homepage extends React.Component {
     super(props);
     this.state = {};
   }
+
   render() {
     return (
       <div className="container main">
@@ -84,11 +72,11 @@ class Homepage extends React.Component {
               Create passwords
             </Link>
           </button>
-          <button className="bg-accent">
+          {/* <button className="bg-accent">
             <Link to="/test" className="color-inverse">
               Test passwords
             </Link>
-          </button>
+          </button> */}
         </div>
       </div>
     );
@@ -98,403 +86,269 @@ class Homepage extends React.Component {
 class Learn extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      buttonPressed : null
+    this.state = {};
+  }
+
+  startPasswordScheme(type) {
+    const failHandler = (err) => {
+      console.error(err);
+      alert("Something went wrong :(");
     };
-
+    stitch
+      .login()
+      .then((stitchUser) => {
+        stitch
+          .startProgress(stitchUser)
+          .then((progress) => {
+            stitch
+              .postLog(
+                new LogItem(
+                  new Date(),
+                  new ObjectId(stitchUser.id),
+                  type,
+                  LogItemType.CREATE_START,
+                  navigator.userAgent,
+                  progress._id
+                )
+              )
+              .then(
+                () =>
+                  (window.location.href = `/password?action=create&type=${type}&progressId=${progress._id}`)
+              )
+              .catch(failHandler);
+          })
+          .catch(failHandler);
+      })
+      .catch(failHandler);
   }
 
-  // changeState = (pressedIs) => {
-  //   this.setState({buttonPressed : pressedIs})
-  //   password = this.state.buttonPressed
-  //   console.log(password)
-  // }
-
-  buttonPressed = (buttonIs) => {
-    return function () {
-      if (buttonIs === "Email"){
-        passwordFor.email = buttonIs
-        passwordFor.banking = null
-        passwordFor.shopping = null
-      } else if (buttonIs ==="Banking"){
-        passwordFor.email = null
-        passwordFor.banking = buttonIs
-        passwordFor.shopping = null
-      } else if (buttonIs ==="Shopping"){
-        passwordFor.email = null
-        passwordFor.banking = null
-        passwordFor.shopping = buttonIs
-      }
-      console.log(passwordFor)
-    }
-  }
-  //buttonPressed.bind(this)
   render() {
     return (
       <div id="learn" className="container main">
         <p>Pick a type of password</p>
-        <button onClick = {this.buttonPressed("Email")} className="border-accent">
-          <Link to="/password?action=create&type=email">Create for Email</Link>
+        <button
+          onClick={() => this.startPasswordScheme("email")}
+          className="border-accent"
+        >
+          Create for Email
         </button>
-        <button onClick = {this.buttonPressed("Banking")} className="border-accent">
-          <Link to="/password?action=create&type=email">
+        {/* <button className="border-accent">
+          <Link to="/password?action=create&type=banking">
             Create for Banking
           </Link>
         </button>
-        <button onClick = {this.buttonPressed("Shopping")} className="border-accent">
-          <Link to="/password?action=create&type=email">
+        <button className="border-accent">
+          <Link to="/password?action=create&type=shopping">
             Create for Shopping
           </Link>
-        </button>
+        </button> */}
       </div>
     );
   }
 }
 
 class Password extends React.Component {
+  blankColour = { name: "", id: 9 };
+  availableColours = [
+    { name: "#263238", id: 0 }, // black
+    { name: "#2196f3", id: 1 }, // blue
+    { name: "#795548", id: 2 }, // brown
+    { name: "#4caf50", id: 3 }, // green
+    { name: "#f48fb1", id: 4 }, // pink
+    { name: "#9c27b0", id: 5 }, // purple
+    { name: "#d32f2f", id: 6 }, // red
+    { name: "#ffeb3b", id: 7 }, // yellow
+  ];
+
   constructor(props) {
     super(props);
+
     const query = queryString.parse(props.location.search);
+
     this.state = {
-      userName: '',
+      userName: "",
+      progressId: query.progressId,
       action: query.action,
       type: query.type,
-      circles: this.initCircles(),
+      progress: null,
+      circles: [],
+      password: [],
       editingCircle: null,
-      resultFromTest: false,
-      passwordRetry: 0
+      confirmedPassword: null,
+      numTries: 0,
     };
-    //this.handlechange = this.handlechange.bind(this);
+
+    this.initCircles = this.initCircles.bind(this);
     this.renderCircle = this.renderCircle.bind(this);
-  }
-  testPassword = event => {
-    //this.increment()
-    for(var i = 0; i < this.state.circles.length; i++) {
-      console.log(this.state.action)
-      if(passwordFor.email != null){
-        if(password.email == null) {
-          return false;
-        }
-        else if (password.email.pwd[i].colour.id !== this.state.circles[i].colour.id) {
-          return false;
-        }
-      } else if (passwordFor.banking != null ) 
-      {
-        if(password.banking == null) {
-          return false;
-        }
-        else if (password.banking.pwd[i].colour.id !== this.state.circles[i].colour.id) {
-          return false;
-        }
-      } else if (passwordFor.shopping != null ) 
-      {
-        if(password.shopping == null) {
-          return false;
-        }
-        else if (password.shopping.pwd[i].colour.id !== this.state.circles[i].colour.id) {
-          return false;
-        }
-      }
+    this.refreshPage = this.refreshPage.bind(this);
+    this.imReady = this.imReady.bind(this);
+    this.confirmPassword = this.confirmPassword.bind(this);
+    this.submitPassword = this.submitPassword.bind(this);
+
+    if (this.state.action !== "create") {
+      stitch
+        .postLog(
+          new LogItem(
+            new Date(),
+            this.state.progress.userId,
+            this.state.type,
+            this.state.action === "confirm"
+              ? LogItemType.CONFIRM_SHOW
+              : LogItemType.TEST_SHOW,
+            "-",
+            this.state.progress._id
+          )
+        )
+        .catch((err) => {
+          console.error(err);
+          alert("Something went wrong when updating logs");
+        });
     }
-    return true;
+
+    this.initCircles();
   }
 
-  changeResult = () => {
-    testResult = this.testPassword();
-    this.setState(
-      {resultFromTest: testResult}
-    )
-  }
-
-  testResult = () => {
-    this.changeResult();
-    if (!testResult) {
-      alert('The passwords you entered is incorrect');
+  buildCircles(blank) {
+    const circles = [];
+    for (let i = 0; i < 7; ++i) {
+      circles.push({
+        pos: i + 1,
+        colour: blank
+          ? this.blankColour
+          : this.availableColours[
+              Math.floor(Math.random() * this.availableColours.length)
+            ],
+      });
     }
-    else {
-      alert('Yay! the password you entered is correct');
-    }  
-    //  console.log(this.state.type);
-    //  console.log(testResult);
-    //  console.log(this.state.passwordRetry);
-     console.log(passwordFor);
+    return circles;
   }
 
-  increment = () => {
-    this.setState(
-      {passwordRetry: this.state.passwordRetry + 1}
-    )
+  /**
+   * @returns {string}
+   */
+  serializeCircles(circles) {
+    return circles.reduce((acc, cur) => (acc += cur.colour.id), "");
   }
 
+  deserializeCircles(text) {
+    const circles = [];
+    for (let i = 0; i < 7; ++i) {
+      const colourId = parseInt(text.charAt(i));
+      circles.push({
+        pos: i + 1,
+        colour:
+          this.availableColours.find((c) => c.id === colourId) ||
+          this.blankColour,
+      });
+    }
+    return circles;
+  }
 
-  submitInfo = event => {
-    //console.log(this.state.action)
-    if (passwordFor.email != null) 
-      password.email = {pwd: this.state.circles}
-    else if (passwordFor.banking != null)
-      password.banking = {pwd: this.state.circles}
-    else if (passwordFor.shopping != null)
-      password.shopping = {pwd: this.state.circles}
-    console.log(password);
+  initCircles() {
+    const failHandler = (err) => {
+      console.error(err);
+      alert("Something went wrong");
+    };
+
+    stitch
+      .getProgress(this.state.progressId)
+      .then((progress) => {
+        if (!progress) return console.error("progress not found!");
+        const passwordName = this.state.type + "Password";
+        const password = progress[passwordName];
+        if (password) {
+          this.setState({
+            progress: progress,
+            circles: this.deserializeCircles(password),
+            password: this.buildCircles(true),
+          });
+        } else {
+          progress[passwordName] = this.serializeCircles(this.buildCircles());
+          stitch
+            .updateProgress(progress)
+            .then(() => {
+              stitch
+                .postLog(
+                  new LogItem(
+                    new Date(),
+                    progress.userId,
+                    this.state.type,
+                    LogItemType.CREATE_PASSWORD,
+                    progress[passwordName],
+                    progress._id
+                  )
+                )
+                .then(() =>
+                  this.setState({
+                    progress: progress,
+                    circles: this.deserializeCircles(progress[passwordName]),
+                    password: this.buildCircles(true),
+                  })
+                )
+                .catch(failHandler);
+            })
+            .catch(failHandler);
+        }
+      })
+      .catch(failHandler);
   }
 
   refreshPage() {
-    window.location.reload(false);
-  }
-  
-  availableColours = [
-    { name: "#263238", id: 0 }, // black
-    { name: "#2196f3", id: 1 }, // blue
-    { name: "#795548", id: 2 }, // brown
-    { name: "#4caf50", id: 3 }, // green
-    { name: "#f48fb1", id: 4 }, // pink
-    { name: "#9c27b0", id: 5 }, // purple
-    { name: "#d32f2f", id: 6 }, // red
-    { name: "#ffeb3b", id: 7 } // yellow
-  ];
+    const progress = this.state.progress;
+    const circles = this.buildCircles();
+    const newPassword = this.serializeCircles(circles);
+    progress[this.state.type + "Password"] = newPassword;
 
-  initCircles() {
-    const circles = [];
-    for (let i = 0; i < 7; ++i) {
-      circles[i] = {
-        pos: i + 1,
-        colour: this.availableColours[
-          Math.floor(Math.random() * this.availableColours.length)
-        ]
-      };
-    }
-    return circles;
-  }
-
-  initCircles2() {
-    const circles = [];
-    for (let i = 0; i < 7; ++i) {
-      circles[i] = {
-        pos: i + 1,
-        colour: "white"
-      };
-    }
-    return circles;
-  }
-
-  editCircle(circle) {
-    circle.refreshing = true;
-    this.setState({ editingCircle: circle }, () =>
-      setTimeout(() => {
-        circle.refreshing = false;
-        this.setState({ editingCircle: circle });
-      }, 75)
-    );
-  }
-
-  /**
-   * @param {{id: number, name: string, pos: number}} circle
-   */
-  renderCircle(circle) {
-    return (
-      <div
-        key={circle.pos}
-        className="circle-box bg-secondary"
-        title="Click me to change my colour"
-        onClick={() => this.editCircle(circle)}
-      >
-        {circle.pos}
-        <div
-          className="circle"
-          style={{ backgroundColor: circle.colour.name }}
-        ></div>
-      </div>
-    );
-  }
-
-  renderPallette() {
-    if (!this.state.editingCircle) return;
-    return (
-      <div
-        className={`pallette ${
-          this.state.editingCircle.refreshing
-            ? "bg-secondary"
-            : "bg-secondary-strong"
-        }`}
-      >
-        <p>
-          <b>Pallette : </b>Editing circle {this.state.editingCircle.pos}
-        </p>
-        <div className="colours">
-          {this.availableColours.map(colour => (
-            <div
-              key={colour.id}
-              className="colour"
-              style={{
-                backgroundColor: colour.name,
-                border:
-                  this.state.editingCircle.colour.id === colour.id
-                    ? "solid 3px white"
-                    : null
-              }}
-              onClick={() => {
-                //this.setState({editingCircle.colour : });
-                this.state.editingCircle.colour = colour;
-                this.setState({ editingCircle: this.state.editingCircle });
-              }}
-            ></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  render() {
-    //console.log(this.state.circles);
-    if (this.state.action === "create") {
-      return (
-        <div id="password" className="container main">
-          <div className="circles">
-            {this.state.circles.map(this.renderCircle)}
-          </div>
-          <div>
-            <button onClick = {this.submitInfo} className = "submitButton">
-              <Link to="/confirmpassword">
-                Submit
-              </Link>
-            </button>
-            <button onClick = {this.refreshPage} className = "refreshButton">
-              Refresh
-            </button>
-          </div>
-        </div>
-      );
-    }
-    else if (this.state.action = "test") {
-      if (this.state.resultFromTest === true) {
-        return (
-          <div id="password" className="container main">
-            <p className = "confirmText"> Enter your {this.state.type} password then press the "submit" button</p>
-            <p className = "triesLeft">{3 - this.state.passwordRetry} try left </p>
-            <div className="circles">
-              {this.state.circles.map(this.renderCircle)}
-            </div>
-            {this.renderPallette()}
-            <div className = "submit">
-              <button onClick = {() => {this.increment();this.testResult();}} className = "confirmButton">
-                <Link to = "/testResultPage">submit</Link>  
-              </button>
-            </div>
-          </div>
-        );
-      } else{
-          if(this.state.passwordRetry < 2){
-            return (
-              <div id="password" className="container main">
-                <p className = "confirmText"> Enter your {this.state.type} password then press the "submit" button</p>
-                <p className = "triesLeft">{3 - this.state.passwordRetry} tries left </p>
-                <div className="circles">
-                  {this.state.circles.map(this.renderCircle)}
-                </div>
-                {this.renderPallette()}
-                <div className = "submit">
-                  <button onClick = {() => {this.increment();this.testResult();}} className = "confirmButton">
-                    submit  
-                  </button>
-                </div>
-              </div>
-            );
-          } else {
-          return (
-            <div id="password" className="container main">
-              <p className = "confirmText"> Enter your {this.state.type} password then press the "submit" button</p>
-              <p className = "triesLeft">{3 - this.state.passwordRetry} try left </p>
-              <div className="circles">
-                {this.state.circles.map(this.renderCircle)}
-              </div>
-              {this.renderPallette()}
-              <div className = "submit">
-                <button onClick = {() => {this.increment();this.testResult();}} className = "confirmButton">
-                  <Link to = "/testResultPage">submit</Link>  
-                </button>
-              </div>
-            </div>
-          );
-        }
-      }
-      }
-
-  }
-}
-
-class PasswordConfirm extends React.Component {
-  constructor(props) {
-    super(props);
-    const query = queryString.parse(props.location.search);
-    this.state = {
-      userName: '',
-      action: query.action,
-      type: query.type,
-      circles: this.initCircles2(),
-      editingCircle: null
-      //password: this.props.password
+    const failHandler = (err) => {
+      console.error(err);
+      alert("something went wrong");
     };
-    this.renderCircle = this.renderCircle.bind(this);
+
+    stitch
+      .updateProgress(progress)
+      .then(() =>
+        stitch
+          .postLog(
+            new LogItem(
+              new Date(),
+              progress.userId,
+              this.state.type,
+              LogItemType.CREATE_RESET,
+              newPassword,
+              progress._id
+            )
+          )
+          .then(() =>
+            this.setState({
+              circles,
+              editingCircle: null,
+            })
+          )
+          .catch(failHandler)
+      )
+      .catch(failHandler);
   }
 
-  submitInfo = event => {
-    for(var i = 0; i < this.state.circles.length; i++) {
-      console.log(this.state.action)
-      if(passwordFor.email != null ){
-        if(password.email == null) {
-          return false;
-        }
-        else if (password.email.pwd[i].colour.id !== this.state.circles[i].colour.id) {
-          return false;
-        }
-      } else if (passwordFor.banking != null) 
-      {
-        if(password.banking == null) {
-          return false;
-        }
-        else if (password.banking.pwd[i].colour.id !== this.state.circles[i].colour.id) {
-          return false;
-        }
-      } else if (passwordFor.shopping != null) 
-      {
-        if(password.shopping == null) {
-          return false;
-        }
-        else if (password.shopping.pwd[i].colour.id !== this.state.circles[i].colour.id) {
-          return false;
-        }
-      } else if (passwordFor.banking === null && passwordFor.shopping === null && passwordFor.email === null) {
-        return false
-      }
-    }
-    return true;
-  }
-
-confirmationResult = () => {
-  confirmedPassword = this.submitInfo();
-  console.log(confirmedPassword);
-}
-  
-  availableColours = [
-    { name: "#263238", id: 0 }, // black
-    { name: "#2196f3", id: 1 }, // blue
-    { name: "#795548", id: 2 }, // brown
-    { name: "#4caf50", id: 3 }, // green
-    { name: "#f48fb1", id: 4 }, // pink
-    { name: "#9c27b0", id: 5 }, // purple
-    { name: "#d32f2f", id: 6 }, // red
-    { name: "#ffeb3b", id: 7 }  // yellow
-  ];
-
-  initCircles2() {
-    const circles = [];
-    for (let i = 0; i < 7; ++i) {
-      circles[i] = {
-        pos: i + 1,
-        colour: this.availableColours[0]
-      };
-    }
-    return circles;
+  imReady() {
+    stitch
+      .postLog(
+        new LogItem(
+          new Date(),
+          this.state.progress.userId,
+          this.state.type,
+          LogItemType.CREATE_READY,
+          "-",
+          this.state.progress._id
+        )
+      )
+      .then(
+        () =>
+          (window.location.href = `/password?action=confirm&type=${this.state.type}&progressId=${this.state.progressId}`)
+      )
+      .catch((err) => {
+        console.error(err);
+        alert("Something went wrong");
+      });
   }
 
   editCircle(circle) {
@@ -507,6 +361,125 @@ confirmationResult = () => {
     );
   }
 
+  confirmPassword() {
+    const enteredPassword = this.serializeCircles(this.state.password);
+    const actualPassword = this.serializeCircles(this.state.circles);
+
+    const failHandler = (err) => {
+      console.error(err);
+      alert("something went wrong");
+    };
+
+    if (enteredPassword !== actualPassword) {
+      stitch
+        .postLog(
+          new LogItem(
+            new Date(),
+            this.state.progress.userId,
+            this.state.type,
+            LogItemType.CONFIRM_INCORRECT,
+            enteredPassword,
+            this.state.progress._id
+          )
+        )
+        .then(() => alert("Sorry, the password you entered is incorrect"))
+        .catch(failHandler);
+    }
+
+    stitch
+      .postLog(
+        new LogItem(
+          new Date(),
+          this.state.progress.userId,
+          this.state.type,
+          LogItemType.CONFIRM_CORRECT,
+          enteredPassword,
+          this.state.progress._id
+        )
+      )
+      .then(() => {
+        alert("You correctly entered the password!");
+
+        let type;
+        if (this.state.type === "email") {
+          type = "banking";
+        } else if (this.state.type === "banking") {
+          type = "shopping";
+        } else {
+          type = ["email", "banking", "shopping"][
+            Math.floor(Math.random() * 3)
+          ];
+          return stitch
+            .postLog(
+              new LogItem(
+                new Date(),
+                this.state.progress.userId,
+                "-",
+                LogItemType.CONFIRM_COMPLETE,
+                "-",
+                this.state.progress._id
+              )
+            )
+            .then(
+              () =>
+                (window.location.href = `/password?action=test&type=${type}&progressId=${this.state.progressId}`)
+            )
+            .catch(failHandler);
+        }
+        window.location.href = `/password?action=create&type=${type}&progressId=${this.state.progressId}`;
+      })
+      .catch(failHandler);
+  }
+
+  submitPassword() {
+    const correct =
+      this.serializeCircles(this.state.password) ===
+      this.serializeCircles(this.state.circles);
+    if (!correct) {
+      if (this.state.numTries < 2) {
+        alert(
+          `Sorry, the password you entered is incorrect\nYou have ${
+            2 - this.state.numTries
+          } tries left`
+        );
+        return this.setState({ numTries: this.state.numTries + 1 });
+      } else {
+        alert(
+          "sorry, the password you entered is incorrect\nYou've used up all your tries, taking you to the next password now."
+        );
+      }
+    } else {
+      alert("You correctly entered the password!");
+    }
+
+    const buildParamName = (type) =>
+      "tested" + type.charAt(0).toUpperCase() + type.substr(1);
+
+    const progress = this.state.progress;
+    progress[buildParamName(this.state.type)] = true;
+
+    stitch
+      .updateProgress(progress)
+      .then(() => {
+        const types = ["shopping", "email", "banking"].filter(
+          (t) => !this.state.progress[buildParamName(t)]
+        );
+
+        if (types.length > 0) {
+          window.location.href = `/password?action=test&type=${
+            types[Math.floor(Math.random() * types.length)]
+          }&progressId=${this.state.progressId}`;
+        } else {
+          alert("Congrats, you've completed the process!");
+          window.location.href = "/";
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("something went wrong");
+      });
+  }
+
   /**
    * @param {{id: number, name: string, pos: number}} circle
    */
@@ -515,7 +488,7 @@ confirmationResult = () => {
       <div
         key={circle.pos}
         className="circle-box bg-secondary"
-        title="Click me to change my colour"
+        // title="Click me to change my colour"
         onClick={() => this.editCircle(circle)}
       >
         {circle.pos}
@@ -541,7 +514,7 @@ confirmationResult = () => {
           <b>Pallette : </b>Editing circle {this.state.editingCircle.pos}
         </p>
         <div className="colours">
-          {this.availableColours.map(colour => (
+          {this.availableColours.map((colour) => (
             <div
               key={colour.id}
               className="colour"
@@ -550,12 +523,12 @@ confirmationResult = () => {
                 border:
                   this.state.editingCircle.colour.id === colour.id
                     ? "solid 3px white"
-                    : null
+                    : null,
               }}
               onClick={() => {
-                //this.setState({editingCircle.colour : });
-                this.state.editingCircle.colour = colour;
-                this.setState({ editingCircle: this.state.editingCircle });
+                const editing = this.state.editingCircle;
+                editing.colour = colour;
+                this.setState({ editingCircle: editing });
               }}
             ></div>
           ))}
@@ -564,166 +537,108 @@ confirmationResult = () => {
     );
   }
 
-  render() {
+  renderForCreate() {
     return (
       <div id="password" className="container main">
-        <p className = "confirmText"> Re-enter your password then press the "Confirm Password" button</p>
+        <p>
+          This is your password for <b>{this.state.type}</b>, take some time to
+          remember it.
+          <br />
+          When you think you've got it, click on "I'm ready" to confirm the
+          password.
+          <br />
+          If you'd like a new password, click on "Refresh".
+        </p>
         <div className="circles">
           {this.state.circles.map(this.renderCircle)}
         </div>
-        {this.renderPallette()}
-
-        <div className = "submit">
-          <button onClick = {this.confirmationResult} className = "confirmButton">
-              <Link to="/confirmationpage"> Confirm Password </Link>
+        <div>
+          <button onClick={this.imReady} className="submitButton color-accent">
+            I'm ready
+          </button>
+          <button onClick={this.refreshPage} className="refreshButton">
+            Refresh
           </button>
         </div>
       </div>
     );
   }
-}
 
-class Confirmation extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-    }
-    
+  renderForConfirm() {
+    return (
+      <div id="password" className="container main confirm">
+        <p className="confirmText">
+          {" "}
+          Re-enter your <b>{this.state.type}</b> password then press the
+          "Confirm Password" button
+        </p>
+        <div className="circles">
+          {this.state.password.map(this.renderCircle)}
+        </div>
+        {this.renderPallette()}
+        <div className="submit">
+          <button onClick={this.confirmPassword} className="confirmButton">
+            Confirm Password
+          </button>
+          <a
+            href={`/password?action=create&type=${this.state.type}&progressId=${this.state.progressId}`}
+          >
+            <button onClick={this.refreshPage} className="refreshButton">
+              Back to Learn
+            </button>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  renderForTest() {
+    return (
+      <div id="password" className="container main confirm">
+        <p className="confirmText">
+          {" "}
+          Now that you've confirmed you know all your passwords, please enter
+          your <b>{this.state.type}</b> password and press submit.
+        </p>
+        <div className="circles">
+          {this.state.password.map(this.renderCircle)}
+        </div>
+        {this.renderPallette()}
+        <div className="submit">
+          <button onClick={this.submitPassword} className="confirmButton">
+            Submit
+          </button>
+        </div>
+      </div>
+    );
   }
 
   render() {
-    if(confirmedPassword){
-      if (password.email != null && password.shopping != null && password.banking != null) {
-        return (
-          <div className = "container main">
-            <h1 className = "confirmText">password confirmed </h1>
-            <h2 className = "confirmText">All three passwords created </h2>
-            <button>
-              <Link to = "/test">
-                Go to testing
-              </Link>
-            </button>
-          </div>
-        )
-      }
-      else {
-        return (
-          <div className = "container main">
-            <h1>password confirmed</h1>
-            <button>
-              <Link to = "/learn">
-                Create your next password
-              </Link>
-            </button>
-          </div>
-        )
-      }
-    }
-    else{
-      return (
-        <div className = "container main">
-          <h1>The password you entered does not match</h1>
-          <button className = "submitButton">
-            <Link to = "/confirmpassword">
-              Re-enter your password
-            </Link>
-          </button>
-          <button className = "refreshButton">
-            <Link to = "/password">
-                Forgot password? create password again  
-            </Link>
-          </button>
-
-        </div>
-      )
-    }
+    return (
+      <div>
+        {this.state.action === "create" ? this.renderForCreate() : null}
+        {this.state.action === "confirm" ? this.renderForConfirm() : null}
+        {this.state.action === "test" ? this.renderForTest() : null}
+      </div>
+    );
   }
 }
 
-class TestResult extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = {
-    }
-    
-  }
-
-  render() {
-    if(testResult){
-        return (
-          <div className = "container main">
-            <h1 className = "confirmText">Test passed </h1>
-            <button>
-              <Link to = "/test">
-                Test the next password
-              </Link>
-            </button>
-          </div>
-        )
-    }
-    else{
-      return (
-        <div className = "container main">
-          <h1>The password you entered is wrong</h1>
-          <button className = "submitButton">
-            <Link to = "/test">
-              test other passwords
-            </Link>
-          </button>
-          <button className = "refreshButton">
-            <Link to = "/learn">
-                create password again  
-            </Link>
-          </button>
-
-        </div>
-      )
-    }
-  }
-}
-
-
-class Test extends React.Component {
+class Report extends React.Component {
   constructor(props) {
     super(props);
     this.state = {};
-  }
-
-  buttonPressed = (buttonIs) => {
-    return function () {
-      if (buttonIs === "Email"){
-        passwordFor.email = buttonIs
-        passwordFor.banking = null
-        passwordFor.shopping = null
-      } else if (buttonIs ==="Banking"){
-        passwordFor.email = null
-        passwordFor.banking = buttonIs
-        passwordFor.shopping = null
-      } else if (buttonIs ==="Shopping"){
-        passwordFor.email = null
-        passwordFor.banking = null
-        passwordFor.shopping = buttonIs
-      }
-      console.log(passwordFor)
-    }
   }
 
   render() {
     return (
       <div id="learn" className="container main">
         <p>Pick a type of password</p>
-        <button onClick = {this.buttonPressed("Email")} className="border-accent">
-          <Link to="/password?action=test&type=email">Test for Email</Link>
-        </button>
-        <button onClick = {this.buttonPressed("Banking")} className="border-accent">
-          <Link to="/password?action=test&type=banking">
-            Test for Banking
-          </Link>
-        </button>
-        <button onClick = {this.buttonPressed("Shopping")} className="border-accent">
-          <Link to="/password?action=test&type=shopping">
-            Test for Shopping
-          </Link>
+        <button
+          onClick={() => this.startPasswordScheme("email")}
+          className="border-accent"
+        >
+          Create for Email
         </button>
       </div>
     );
