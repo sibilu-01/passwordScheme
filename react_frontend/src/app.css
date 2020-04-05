@@ -72,18 +72,8 @@
   cursor: pointer;
 }
 
-#userName .text-box {
-  width: 850;
-  height: 125;
-  margin-top: -10px;
-  margin-left: -2.5px;
-}
-
 #password.confirm .circles .circle-box:hover {
-  width: 85;
-  height: 125;
-  margin-top: -10px;
-  margin-left: -2.5px;
+  margin-top: -6px;
 }
 
 #password .confirmButton {

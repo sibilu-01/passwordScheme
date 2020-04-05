@@ -21,15 +21,6 @@ export default class app extends Component {
     };
   }
 
-  componentDidMount() {
-    // fetch(`${BACKEND_ADDRESS}/paragraphs/list`)
-    //   .then(response => response.json())
-    //   .then(responseJson => {
-    //     console.log(responseJson.data);
-    //     this.setState({ paragraphs: responseJson });
-    //   });
-  }
-
   render() {
     return (
       <Router>
@@ -48,6 +39,7 @@ export default class app extends Component {
           <Switch>
             <Route path="/learn" component={Learn} />
             <Route path="/password" component={Password} />
+            <Route path="/report" component={Report} />
             <Route path="/" component={Homepage} />
           </Switch>
         </div>
@@ -69,14 +61,14 @@ class Homepage extends React.Component {
         <div className="buttons">
           <button className="bg-accent">
             <Link to="/learn" className="color-inverse">
-              Create passwords
+              I am a participant
             </Link>
           </button>
-          {/* <button className="bg-accent">
-            <Link to="/test" className="color-inverse">
-              Test passwords
+          <button>
+            <Link to="/report" className="color-primary">
+              FOR PROJECT TEAM USE ONLY
             </Link>
-          </button> */}
+          </button>
         </div>
       </div>
     );
@@ -263,6 +255,7 @@ class Password extends React.Component {
     const progress = this.state.progress;
     const passwordName = this.state.type + "Password";
     const password = progress[passwordName];
+    console.log(password);
 
     if (password) {
       this.setState({
@@ -376,7 +369,7 @@ class Password extends React.Component {
     };
 
     if (enteredPassword !== actualPassword) {
-      stitch
+      return stitch
         .postLog(
           new LogItem(
             new Date(),
@@ -404,6 +397,24 @@ class Password extends React.Component {
       )
       .then(() => {
         alert("You correctly entered the password!");
+
+        const action = prompt(
+          "What would you like to do next?\n" +
+            "Enter 'next' to skip to the next stage\n" +
+            "Enter 'learn' to see the current password again\n" +
+            "Enter 'confirm' to try entering the current password again"
+        );
+
+        console.log(action);
+
+        if (action === "learn") {
+          return (window.location.href = `/password?action=create&type=${this.state.type}&progressId=${this.state.progressId}`);
+        } else if (action === "confirm") {
+          return this.setState({
+            password: this.buildCircles(true),
+            editingCircle: null,
+          });
+        }
 
         let type;
         if (this.state.type === "email") {
@@ -697,17 +708,21 @@ class Report extends React.Component {
   constructor(props) {
     super(props);
     this.state = {};
+    this.generate = this.generate.bind(this);
+  }
+
+  generate() {
+    alert("gotcha xD");
   }
 
   render() {
     return (
       <div id="learn" className="container main">
-        <p>Pick a type of password</p>
-        <button
-          onClick={() => this.startPasswordScheme("email")}
-          className="border-accent"
-        >
-          Create for Email
+        <p>
+          Generate report CSV. Can take some time, <b>BE PATIENT</b>
+        </p>
+        <button onClick={this.generate} className="bg-accent color-inverse">
+          Click
         </button>
       </div>
     );
