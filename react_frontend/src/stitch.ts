@@ -20,7 +20,6 @@ export enum LogItemType {
   CONFIRM_COMPLETE,
   TEST_SHOW,
   TEST_INCORRECT,
-  TEST_CORRECT,
   TEST_FAIL,
   TEST_PASS,
   FINISH
@@ -157,6 +156,7 @@ export class StitchService {
         `Participant ${prompt("Please enter your participant number")}`,
         "", "", "", false, false, false
       );
+      console.log(progress.toJSON());
       StitchService.db.collection(StitchService.PROGRESS_COL)
         .insertOne(progress.toJSON())
         .then(result => {

@@ -432,52 +432,116 @@ class Password extends React.Component {
   }
 
   submitPassword() {
-    const correct =
-      this.serializeCircles(this.state.password) ===
-      this.serializeCircles(this.state.circles);
-    if (!correct) {
+    const that = this;
+    const enteredPassword = this.serializeCircles(this.state.password);
+    const actualPassword = this.serializeCircles(this.state.circles);
+
+    const failHandler = (err) => {
+      console.error(err);
+      alert("something went wrong");
+    };
+
+    if (enteredPassword !== actualPassword) {
       if (this.state.numTries < 2) {
-        alert(
-          `Sorry, the password you entered is incorrect\nYou have ${
-            2 - this.state.numTries
-          } tries left`
-        );
-        return this.setState({ numTries: this.state.numTries + 1 });
+        return stitch
+          .postLog(
+            new LogItem(
+              new Date(),
+              this.state.progress.userId,
+              this.state.type,
+              LogItemType.TEST_FAIL,
+              enteredPassword,
+              this.state.progress._id
+            )
+          )
+          .then(() => {
+            alert(
+              `Sorry, the password you entered is incorrect\nYou have ${
+                2 - this.state.numTries
+              } tries left`
+            );
+            this.setState({ numTries: this.state.numTries + 1 });
+          })
+          .catch(failHandler);
       } else {
-        alert(
-          "sorry, the password you entered is incorrect\nYou've used up all your tries, taking you to the next password now."
-        );
+        return stitch
+          .postLog(
+            new LogItem(
+              new Date(),
+              this.state.progress.userId,
+              this.state.type,
+              LogItemType.TEST_FAIL,
+              enteredPassword,
+              this.state.progress._id
+            )
+          )
+          .then(() =>
+            alert(
+              "sorry, the password you entered is incorrect\nYou've used up all your tries, taking you to the next password now."
+            )
+          )
+          .then(continueToNext)
+          .catch(failHandler);
       }
     } else {
-      alert("You correctly entered the password!");
+      stitch
+        .postLog(
+          new LogItem(
+            new Date(),
+            this.state.progress.userId,
+            this.state.type,
+            LogItemType.TEST_PASS,
+            enteredPassword,
+            this.state.progress._id
+          )
+        )
+        .then(() => alert("You correctly entered the password!"))
+        .then(continueToNext)
+        .catch(failHandler);
     }
 
-    const buildParamName = (type) =>
-      "tested" + type.charAt(0).toUpperCase() + type.substr(1);
+    function continueToNext() {
+      const buildParamName = (type) =>
+        "tested" + type.charAt(0).toUpperCase() + type.substr(1);
 
-    const progress = this.state.progress;
-    progress[buildParamName(this.state.type)] = true;
+      const progress = that.state.progress;
+      progress[buildParamName(that.state.type)] = true;
 
-    stitch
-      .updateProgress(progress)
-      .then(() => {
-        const types = ["shopping", "email", "banking"].filter(
-          (t) => !this.state.progress[buildParamName(t)]
-        );
+      stitch
+        .updateProgress(progress)
+        .then(() => {
+          const types = ["shopping", "email", "banking"].filter(
+            (t) => !that.state.progress[buildParamName(t)]
+          );
 
-        if (types.length > 0) {
-          window.location.href = `/password?action=test&type=${
-            types[Math.floor(Math.random() * types.length)]
-          }&progressId=${this.state.progressId}`;
-        } else {
-          alert("Congrats, you've completed the process!");
-          window.location.href = "/";
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("something went wrong");
-      });
+          if (types.length > 0) {
+            window.location.href = `/password?action=test&type=${
+              types[Math.floor(Math.random() * types.length)]
+            }&progressId=${that.state.progressId}`;
+          } else {
+            stitch
+              .postLog(
+                new LogItem(
+                  new Date(),
+                  that.state.progres.userId,
+                  "-",
+                  LogItemType.FINISH,
+                  "-",
+                  that.state.progress._id
+                )
+              )
+              .then(() => {
+                alert("Congrats, you've completed the process!");
+                window.location.href = "/";
+              })
+              .catch(failHandler);
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("something went wrong");
+        });
+    }
   }
 
   /**
