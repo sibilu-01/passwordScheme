@@ -72,8 +72,18 @@
   cursor: pointer;
 }
 
+#userName .text-box {
+  width: 850;
+  height: 125;
+  margin-top: -10px;
+  margin-left: -2.5px;
+}
+
 #password.confirm .circles .circle-box:hover {
-  margin-top: -6px;
+  width: 85;
+  height: 125;
+  margin-top: -10px;
+  margin-left: -2.5px;
 }
 
 #password .confirmButton {
@@ -93,10 +103,15 @@
 
 #password .confirmText {
   margin-top: 20px;
-  margin-left: -180px;
+  margin-left: -230px;
   color: green;
 }
 
+#password .triesLeft {
+  margin-top: 0px;
+  margin-left: -580px;
+  color: red;
+}
 #password .circles .circle-box + .circle-box {
   margin-left: 20px;
 }

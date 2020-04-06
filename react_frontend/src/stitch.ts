@@ -11,68 +11,44 @@ import { ObjectId } from 'bson';
 
 export enum LogItemType {
   CREATE_START,
-  CREATE_PASSWORD,
   CREATE_RESET,
-  CREATE_READY,
-  CONFIRM_SHOW,
-  CONFIRM_INCORRECT,
-  CONFIRM_CORRECT,
+  CONFIRM_TRY,
+  CONFIRM_RESET,
   CONFIRM_COMPLETE,
-  TEST_SHOW,
-  TEST_INCORRECT,
+  TEST_ENTRY_FAIL,
+  TEST_ENTRY_PASS,
   TEST_FAIL,
-  TEST_PASS,
+  TEST_SUCCESS,
   FINISH
 }
 
 export class LogItem {
-  _id: ObjectId | undefined;
-  readonly scheme: string = "colourCircles";
-  readonly mode: string = "9:0-7";
+  _id: string = "";
 
   constructor(
-    private time: Date,
-    private userId: ObjectId,
-    private site: string, // type
-    private eventAndDetails: LogItemType, // event_details
-    private data: string,
-    private progressId: ObjectId
+    private timestamp: Date,
+    private type: LogItemType,
+    private passwordType: string,
+    private progressId: string,
+    private userId: string
   ) { }
 
   toJSON() {
     return {
-      time: this.time.getTime(),
-      userId: this.userId,
-      site: this.site,
-      scheme: this.scheme,
-      mode: this.mode,
-      eventAndDetails: LogItemType[this.eventAndDetails],
-      data: this.data,
-      progressId: this.progressId
+      timestamp: this.timestamp.getTime(),
+      type: this.type.toString(),
+      passwordType: this.passwordType,
+      progressId: this.progressId,
+      userId: this.userId
     }
-  }
-
-  static fromJSON(json: any): LogItem {
-    const eventAndDetails: LogItemType = (LogItemType as any)[json.eventAndDetails];
-    const item = new LogItem(
-      new Date(json.time),
-      json.userId,
-      json.site,
-      eventAndDetails,
-      json.data,
-      json.progressId
-    );
-    item._id = json._id;
-    return item;
   }
 }
 
 export class ProgressItem {
-  _id: ObjectId | undefined;
+  _id: string = "";
 
   constructor(
-    private userId: ObjectId,
-    private userName: string,
+    private userId: string,
     private emailPassword: string,
     private bankingPassword: string,
     private shoppingPassword: string,
@@ -84,7 +60,6 @@ export class ProgressItem {
   toJSON() {
     return {
       userId: this.userId,
-      userName: this.userName,
       emailPassword: this.emailPassword,
       bankingPassword: this.bankingPassword,
       shoppingPassword: this.shoppingPassword,
@@ -97,7 +72,6 @@ export class ProgressItem {
   static fromJSON(json: any): ProgressItem {
     const progress = new ProgressItem(
       json.userId,
-      json.userName,
       json.emailPassword,
       json.bankingPassword,
       json.shoppingPassword,
@@ -152,15 +126,13 @@ export class StitchService {
   startProgress(stitchUser: StitchUser): Promise<ProgressItem> {
     return new Promise((resolve, reject) => {
       const progress = new ProgressItem(
-        new ObjectId(stitchUser.id),
-        `Participant ${prompt("Please enter your participant number")}`,
+        stitchUser.id,
         "", "", "", false, false, false
       );
-      console.log(progress.toJSON());
       StitchService.db.collection(StitchService.PROGRESS_COL)
         .insertOne(progress.toJSON())
         .then(result => {
-          progress._id = result.insertedId;
+          progress._id = "" + result.insertedId;
           resolve(progress);
         })
         .catch(reject);
@@ -169,7 +141,6 @@ export class StitchService {
 
   getProgress(progressId: string): Promise<ProgressItem | null> {
     return new Promise((resolve, reject) => {
-      console.log(progressId);
       StitchService.db.collection(StitchService.PROGRESS_COL)
         .findOne({ _id: new ObjectId(progressId) })
         .then(res => resolve(res ? ProgressItem.fromJSON(res) : null))
@@ -191,7 +162,7 @@ export class StitchService {
       StitchService.db.collection(StitchService.LOGS_COL)
         .insertOne(log.toJSON())
         .then(result => {
-          log._id = result.insertedId;
+          log._id = "" + result.insertedId;
           resolve(log);
         })
         .catch(reject);
