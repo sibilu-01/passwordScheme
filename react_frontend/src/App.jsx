@@ -548,7 +548,7 @@ class Password extends React.Component {
               )
               .then(() => {
                 alert("Congrats, you've completed the process!");
-                window.location.href = "/";
+                window.location.href = "https://hotsoft.carleton.ca/comp3008limesurvey/index.php/318265?newtest=Y&lang=en";
               })
               .catch(failHandler);
           }

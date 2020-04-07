@@ -152,7 +152,7 @@ export class StitchService {
   startProgress(stitchUser: StitchUser): Promise<ProgressItem> {
     return new Promise((resolve, reject) => {
       const participantNum = prompt("Please enter your participant number");
-      if (participantNum == "") return reject("you must enter a participant number");
+      if (participantNum === "") return reject("you must enter a participant number");
       const progress = new ProgressItem(
         new ObjectId(stitchUser.id),
         `Participant ${participantNum}`,
