@@ -527,7 +527,7 @@ class Password extends React.Component {
         .updateProgress(progress)
         .then(() => {
           const types = ["shopping", "email", "banking"].filter(
-            (t) => !that.state.progress[buildParamName(t)]
+            (t) => !progress[buildParamName(t)]
           );
 
           if (types.length > 0) {
