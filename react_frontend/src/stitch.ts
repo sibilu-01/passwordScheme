@@ -9,6 +9,10 @@ import {
 import { ObjectId } from 'bson';
 
 
+/**
+ * Type of log. Holds both the event and details fields when it comes to CSV file
+ * generation.
+ */
 export enum LogItemType {
   CREATE_START,
   CREATE_PASSWORD,
@@ -25,6 +29,9 @@ export enum LogItemType {
   FINISH
 }
 
+/**
+ * Document holding a specific log
+ */
 export class LogItem {
   _id: ObjectId | undefined;
   readonly scheme: string = "colourCircles";
@@ -34,11 +41,12 @@ export class LogItem {
     private time: Date,
     private userId: ObjectId,
     private site: string, // type
-    private eventAndDetails: LogItemType, // event_details
+    private eventAndDetails: LogItemType, // event_details (separated by an underscore)
     private data: string,
     private progressId: ObjectId
   ) { }
 
+  // convert the object to Atlas-friendly JSON
   toJSON() {
     return {
       time: this.time.getTime(),
@@ -52,6 +60,7 @@ export class LogItem {
     }
   }
 
+  // build an object from Atlas
   static fromJSON(json: any): LogItem {
     const eventAndDetails: LogItemType = (LogItemType as any)[json.eventAndDetails];
     const item = new LogItem(
@@ -67,12 +76,15 @@ export class LogItem {
   }
 }
 
+/**
+ * Document holding the progress of a participant through the entire process.
+ */
 export class ProgressItem {
   _id: ObjectId | undefined;
 
   constructor(
     private userId: ObjectId,
-    private userName: string,
+    private userName: string, // participant number === `Participant ${i}`
     private emailPassword: string,
     private bankingPassword: string,
     private shoppingPassword: string,
@@ -81,6 +93,7 @@ export class ProgressItem {
     private testedShopping: boolean
   ) { }
 
+  // convert the object to Atlas-friendly JSON
   toJSON() {
     return {
       userId: this.userId,
@@ -94,6 +107,7 @@ export class ProgressItem {
     }
   }
 
+  // build an object from Atlas
   static fromJSON(json: any): ProgressItem {
     const progress = new ProgressItem(
       json.userId,
@@ -103,19 +117,23 @@ export class ProgressItem {
       json.shoppingPassword,
       json.testedEmail,
       json.testedBanking,
-      json.testShopping
+      json.testedShopping
     );
     progress._id = json._id;
     return progress;
   }
 }
 
+/**
+ * Service class (provides the main functionality)
+ */
 export class StitchService {
   private static client: StitchAppClient;
   private static db: RemoteMongoDatabase;
   private static readonly PROGRESS_COL = "progress";
   private static readonly LOGS_COL = "logs";
 
+  // connect to MongoDB Stitch and Atlas
   constructor() {
     if (!StitchService.client) {
       const client = StitchService.client =
@@ -132,6 +150,9 @@ export class StitchService {
     return StitchService.client.auth.isLoggedIn;
   }
 
+  /**
+   * authenticate the user anonymously
+   */
   login(): Promise<StitchUser> {
     if (!StitchService.client.auth.isLoggedIn) {
       return Stitch.defaultAppClient.auth
@@ -149,6 +170,10 @@ export class StitchService {
     return user;
   }
 
+  /**
+   * initiates a new progress document for a participant
+   * @param stitchUser the participant
+   */
   startProgress(stitchUser: StitchUser): Promise<ProgressItem> {
     return new Promise((resolve, reject) => {
       const participantNum = prompt("Please enter your participant number");
@@ -169,6 +194,10 @@ export class StitchService {
     })
   }
 
+  /**
+   * Retrieves the progress document for a participant
+   * @param progressId
+   */
   getProgress(progressId: string): Promise<ProgressItem | null> {
     return new Promise((resolve, reject) => {
       console.log(progressId);
@@ -179,6 +208,10 @@ export class StitchService {
     });
   }
 
+  /**
+   * Updates a participant's progress
+   * @param progress
+   */
   updateProgress(progress: ProgressItem): Promise<void> {
     return new Promise((resolve, reject) => {
       StitchService.db.collection(StitchService.PROGRESS_COL)
@@ -188,6 +221,10 @@ export class StitchService {
     });
   }
 
+  /**
+   * Posts a log to the database
+   * @param log
+   */
   postLog(log: LogItem): Promise<LogItem> {
     return new Promise((resolve, reject) => {
       StitchService.db.collection(StitchService.LOGS_COL)

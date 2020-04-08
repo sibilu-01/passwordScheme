@@ -2,6 +2,9 @@ import React, { Component } from "react";
 import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
 import * as queryString from "query-string";
 
+/**
+ * ./stitch is our MongoDB Stitch/Atlas interface
+ */
 import { StitchService, LogItem, LogItemType } from "./stitch";
 
 import "./styles.css";
@@ -10,15 +13,13 @@ import { ObjectId } from "bson";
 
 const stitch = new StitchService();
 
+/**
+ * Root componenet, holds everything in the app
+ */
 export default class app extends Component {
   constructor(props) {
     super();
-    this.state = {
-      list: true,
-      card: true,
-      paragraphs: [],
-      paragraph: {},
-    };
+    this.state = {};
   }
 
   render() {
@@ -48,6 +49,10 @@ export default class app extends Component {
   }
 }
 
+/**
+ * Homepage component, hold 2 buttons including "I am a participant"
+ * This component leads people to the /learn page
+ */
 class Homepage extends React.Component {
   constructor(props) {
     super(props);
@@ -75,24 +80,39 @@ class Homepage extends React.Component {
   }
 }
 
+/**
+ * Learn page. We don't really need this but we were making lots of changes
+ * to the code base and in the interest of not breaking things. We kept it.
+ * This page starts a new pathway for password scheme testing.
+ */
 class Learn extends React.Component {
   constructor(props) {
     super(props);
     this.state = {};
   }
 
+  /**
+   * Authenticates the user, assigns a participant number and begins
+   * testing of the password scheme
+   * @param {string} type what type of password should we start with?
+   *                      === "email"
+   */
   startPasswordScheme(type) {
+    // alert when something goes wrong
     const failHandler = (err) => {
       console.error(err);
       alert("Something went wrong :(");
     };
     stitch
+      // authenticate the user
       .login()
       .then((stitchUser) => {
         stitch
+          // create a new progress document in Atlas
           .startProgress(stitchUser)
           .then((progress) => {
             stitch
+              // log that a participant started
               .postLog(
                 new LogItem(
                   new Date(),
@@ -105,6 +125,7 @@ class Learn extends React.Component {
               )
               .then(
                 () =>
+                  // navigate to the password scheme testing url
                   (window.location.href = `/password?action=create&type=${type}&progressId=${progress._id}`)
               )
               .catch(failHandler);
@@ -124,22 +145,17 @@ class Learn extends React.Component {
         >
           Create for Email
         </button>
-        {/* <button className="border-accent">
-          <Link to="/password?action=create&type=banking">
-            Create for Banking
-          </Link>
-        </button>
-        <button className="border-accent">
-          <Link to="/password?action=create&type=shopping">
-            Create for Shopping
-          </Link>
-        </button> */}
       </div>
     );
   }
 }
 
+/**
+ * Password scheme testing page. Handles creating passwords, confirming
+ * passwords and testing them. (The whole process)
+ */
 class Password extends React.Component {
+  // define some constants (for the coloured circles)
   blankColour = { name: "", id: 9 };
   availableColours = [
     { name: "#263238", id: 0 }, // black
@@ -155,6 +171,7 @@ class Password extends React.Component {
   constructor(props) {
     super(props);
 
+    // get query options
     const query = queryString.parse(props.location.search);
 
     this.state = {
@@ -170,6 +187,7 @@ class Password extends React.Component {
       numTries: 0,
     };
 
+    // bind functions
     this.initCircles = this.initCircles.bind(this);
     this.renderCircle = this.renderCircle.bind(this);
     this.refreshPage = this.refreshPage.bind(this);
@@ -178,11 +196,13 @@ class Password extends React.Component {
     this.submitPassword = this.submitPassword.bind(this);
 
     stitch
+      // get progress document from Atlas
       .getProgress(this.state.progressId)
       .then((progress) => {
         if (!progress) return alert("progress not found!");
         this.setState({ progress: progress }, () => {
           if (this.state.action !== "create") {
+            // post some logs
             stitch
               .postLog(
                 new LogItem(
@@ -201,6 +221,7 @@ class Password extends React.Component {
                 alert("Something went wrong when updating logs");
               });
           }
+          // generate new password if we're in the create stage
           this.initCircles();
         });
       })
@@ -210,6 +231,7 @@ class Password extends React.Component {
       });
   }
 
+  // build a password array (not neccessarily a real one, can be blank)
   buildCircles(blank) {
     const circles = [];
     for (let i = 0; i < 7; ++i) {
@@ -226,12 +248,19 @@ class Password extends React.Component {
   }
 
   /**
+   * Serialize a password for storage in Atlas.
+   * Also used for verifying a password -- if 2 serialized passwords match,
+   * then the passwords are the same
    * @returns {string}
    */
   serializeCircles(circles) {
     return circles.reduce((acc, cur) => (acc += cur.colour.id), "");
   }
 
+  /**
+   * Converts a serialized password back into an object array
+   * @param {string} text
+   */
   deserializeCircles(text) {
     const circles = [];
     for (let i = 0; i < 7; ++i) {
@@ -246,6 +275,7 @@ class Password extends React.Component {
     return circles;
   }
 
+  // geenrate / retrieve password for display
   initCircles() {
     const failHandler = (err) => {
       console.error(err);
@@ -257,12 +287,14 @@ class Password extends React.Component {
     const password = progress[passwordName];
     console.log(password);
 
+    // if a password has been made, just retrieve it
     if (password) {
       this.setState({
         circles: this.deserializeCircles(password),
         password: this.buildCircles(true),
       });
     } else {
+      // else create a new password, save it and add a log
       progress[passwordName] = this.serializeCircles(this.buildCircles());
       stitch
         .updateProgress(progress)
@@ -291,6 +323,9 @@ class Password extends React.Component {
     }
   }
 
+  /**
+   * Swap an existing password for a new one
+   */
   refreshPage() {
     const progress = this.state.progress;
     const circles = this.buildCircles();
@@ -306,6 +341,7 @@ class Password extends React.Component {
       .updateProgress(progress)
       .then(() =>
         stitch
+          // post a log that a password's been reset
           .postLog(
             new LogItem(
               new Date(),
@@ -327,6 +363,10 @@ class Password extends React.Component {
       .catch(failHandler);
   }
 
+  /**
+   * Move on to the password-confirmation stage where the user inputs the
+   * password again to show they've memorised it
+   */
   imReady() {
     stitch
       .postLog(
@@ -349,6 +389,10 @@ class Password extends React.Component {
       });
   }
 
+  /**
+   * Function for changing the react state to editing a specific circle's
+   * colour
+   */
   editCircle(circle) {
     circle.refreshing = true;
     this.setState({ editingCircle: circle }, () =>
@@ -359,7 +403,12 @@ class Password extends React.Component {
     );
   }
 
+  /**
+   * Checks that the entered password matches the actual password during the
+   * password confirmation stage.
+   */
   confirmPassword() {
+    // serialize the passwords for verification
     const enteredPassword = this.serializeCircles(this.state.password);
     const actualPassword = this.serializeCircles(this.state.circles);
 
@@ -369,6 +418,8 @@ class Password extends React.Component {
     };
 
     if (enteredPassword !== actualPassword) {
+      // if the entered password is incorrect, post a log and let them try
+      // again
       return stitch
         .postLog(
           new LogItem(
@@ -384,6 +435,8 @@ class Password extends React.Component {
         .catch(failHandler);
     }
 
+    // if the entered password is correct, post a log and allow them to
+    // confirm the password again, return to the learn stage, or move on
     stitch
       .postLog(
         new LogItem(
@@ -407,6 +460,8 @@ class Password extends React.Component {
 
         console.log(action);
 
+        if (!action) return;
+
         if (action === "learn") {
           return (window.location.href = `/password?action=create&type=${this.state.type}&progressId=${this.state.progressId}`);
         } else if (action === "confirm") {
@@ -416,6 +471,9 @@ class Password extends React.Component {
           });
         }
 
+        // if they're moving on to the next stage, select the next password
+        // to be confirmed; or if they've all been confirmed, randomly select
+        // a type of password to being testing.
         let type;
         if (this.state.type === "email") {
           type = "banking";
@@ -425,30 +483,39 @@ class Password extends React.Component {
           type = ["email", "banking", "shopping"][
             Math.floor(Math.random() * 3)
           ];
-          return stitch
-            .postLog(
-              new LogItem(
-                new Date(),
-                this.state.progress.userId,
-                "-",
-                LogItemType.CONFIRM_COMPLETE,
-                "-",
-                this.state.progress._id
+          return (
+            stitch
+              // log that the confirm process is complete
+              .postLog(
+                new LogItem(
+                  new Date(),
+                  this.state.progress.userId,
+                  "-",
+                  LogItemType.CONFIRM_COMPLETE,
+                  "-",
+                  this.state.progress._id
+                )
               )
-            )
-            .then(
-              () =>
-                (window.location.href = `/password?action=test&type=${type}&progressId=${this.state.progressId}`)
-            )
-            .catch(failHandler);
+              .then(
+                () =>
+                  // navigate to the testing stage
+                  (window.location.href = `/password?action=test&type=${type}&progressId=${this.state.progressId}`)
+              )
+              .catch(failHandler)
+          );
         }
+        // move on to the next password
         window.location.href = `/password?action=create&type=${type}&progressId=${this.state.progressId}`;
       })
       .catch(failHandler);
   }
 
+  /**
+   * Submit a password entered during the testing stage
+   */
   submitPassword() {
     const that = this;
+    // serialize the passwords for verification
     const enteredPassword = this.serializeCircles(this.state.password);
     const actualPassword = this.serializeCircles(this.state.circles);
 
@@ -458,8 +525,12 @@ class Password extends React.Component {
     };
 
     if (enteredPassword !== actualPassword) {
+      // if the entered password is incorrect, check how many tries the user
+      // has left
       if (this.state.numTries < 2) {
-        return stitch
+        // if we haven't used up our 3 tries, log the error and display the
+        // password again
+        stitch
           .postLog(
             new LogItem(
               new Date(),
@@ -480,7 +551,9 @@ class Password extends React.Component {
           })
           .catch(failHandler);
       } else {
-        return stitch
+        // if we've used up our 3 tries, log the failure and move on to the
+        // next password
+        stitch
           .postLog(
             new LogItem(
               new Date(),
@@ -515,26 +588,33 @@ class Password extends React.Component {
         .then(continueToNext)
         .catch(failHandler);
     }
+    return;
 
     function continueToNext() {
       const buildParamName = (type) =>
         "tested" + type.charAt(0).toUpperCase() + type.substr(1);
 
       const progress = that.state.progress;
+
+      // mark the password type (email/banking/shopping) as tested
       progress[buildParamName(that.state.type)] = true;
 
       stitch
         .updateProgress(progress)
         .then(() => {
+          // filter out password types we've already tested
           const types = ["shopping", "email", "banking"].filter(
             (t) => !progress[buildParamName(t)]
           );
 
+          // if we still have password types left to test, randomly pick one
+          // and test it
           if (types.length > 0) {
             window.location.href = `/password?action=test&type=${
               types[Math.floor(Math.random() * types.length)]
             }&progressId=${that.state.progressId}`;
           } else {
+            // else log that we're done the password-scheme process
             stitch
               .postLog(
                 new LogItem(
@@ -548,7 +628,9 @@ class Password extends React.Component {
               )
               .then(() => {
                 alert("Congrats, you've completed the process!");
-                window.location.href = "https://hotsoft.carleton.ca/comp3008limesurvey/index.php/318265?newtest=Y&lang=en";
+                // navigate to the questionnaire
+                window.location.href =
+                  "https://hotsoft.carleton.ca/comp3008limesurvey/index.php/318265?newtest=Y&lang=en";
               })
               .catch(failHandler);
           }
@@ -561,6 +643,7 @@ class Password extends React.Component {
   }
 
   /**
+   * Renders an HTML circle on the screen
    * @param {{id: number, name: string, pos: number}} circle
    */
   renderCircle(circle) {
@@ -580,6 +663,9 @@ class Password extends React.Component {
     );
   }
 
+  /**
+   * Renderes an HTML pallete (for changing circle colours) on the screen
+   */
   renderPallette() {
     if (!this.state.editingCircle) return;
     return (
@@ -617,6 +703,9 @@ class Password extends React.Component {
     );
   }
 
+  /**
+   * Renders the HTML page for the create-password stage
+   */
   renderForCreate() {
     return (
       <div id="password" className="container main">
@@ -644,6 +733,9 @@ class Password extends React.Component {
     );
   }
 
+  /**
+   * Renders the HTML page for the confirm-password stage
+   */
   renderForConfirm() {
     return (
       <div id="password" className="container main confirm">
@@ -672,6 +764,9 @@ class Password extends React.Component {
     );
   }
 
+  /**
+   * Renders the HTML page for the test-password stage
+   */
   renderForTest() {
     return (
       <div id="password" className="container main confirm">
@@ -693,6 +788,10 @@ class Password extends React.Component {
     );
   }
 
+  /**
+   * Default render function. Actual result will depend on the state of the
+   * current progress.
+   */
   render() {
     return (
       <div>
@@ -704,6 +803,9 @@ class Password extends React.Component {
   }
 }
 
+/**
+ * Easter egg class. Not important.
+ */
 class Report extends React.Component {
   constructor(props) {
     super(props);
