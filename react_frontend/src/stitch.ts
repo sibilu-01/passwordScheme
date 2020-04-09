@@ -8,7 +8,6 @@ import {
 } from 'mongodb-stitch-browser-sdk';
 import { ObjectId } from 'bson';
 
-
 /**
  * Type of log. Holds both the event and details fields when it comes to CSV file
  * generation.
